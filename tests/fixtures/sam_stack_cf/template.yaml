@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Description
+
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Parameters:
+  Param:
+    Type: String
+
+Resources:
+  Table000001:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Table000001
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  SubStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./sub_stack_template.yaml
+      Parameters:
+        TableName: !Ref Param
+
