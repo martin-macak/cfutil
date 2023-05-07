@@ -22,10 +22,17 @@ __version__ = "1.1.0"
 import itertools
 import json
 import re
+from typing import Iterable, Union
 
 import six
 import yaml
+from yaml import SafeLoader
 from yaml.constructor import ConstructorError
+from yaml.representer import BaseRepresenter
+
+from cfn.macros import (include_json_string_from_yaml_file_constructor,
+                        include_string_constructor,
+                        generate_uuid_constructor)
 
 
 class CloudFormationObject(object):
@@ -135,7 +142,14 @@ functions = [
     ("Fn::Sub", "Sub", CloudFormationObject.SEQUENCE_OR_SCALAR),
 ]
 
-_object_classes = None
+macros = [
+    ('Macro::IncludeString', "IncludeString", include_string_constructor),
+    ('Macro::IncludeJsonStringFromYamlFile', "IncludeJsonStringFromYamlFile",
+     include_json_string_from_yaml_file_constructor),
+    ('Macro::GenerateUUID', "GenerateUUID", generate_uuid_constructor),
+]
+
+_object_classes: Union[None, Iterable] = None
 
 
 def init(safe=False):
@@ -172,4 +186,30 @@ def mark_safe():
         yaml.add_representer(obj_cls, obj_cls.represent, Dumper=yaml.SafeDumper)
 
 
+def instrument_loader(loader):
+    for obj_cls in _object_classes:
+        loader.add_constructor(obj_cls.tag, obj_cls.construct)
+
+    for name_, tag_, constructor_ in macros:
+        if not tag_.startswith("!"):
+            tag_ = "!{}".format(tag_)
+        tag_ = six.u(tag_)
+        loader.add_constructor(tag_, constructor_)
+
+
+def instrument_dumper(dumper):
+    for obj_cls in _object_classes:
+        dumper.add_representer(obj_cls, obj_cls.represent)
+
+
+class CfnLoader(SafeLoader):
+    pass
+
+
+class CfnRepresenter(BaseRepresenter):
+    pass
+
+
 init()
+instrument_loader(CfnLoader)
+instrument_dumper(CfnRepresenter)

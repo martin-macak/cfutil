@@ -1,6 +1,7 @@
 import copy
 import os
 from typing import Union
+from cfn.macros import rel_dir_path
 
 import yaml
 
@@ -22,7 +23,7 @@ def process_cloudformation_resources(template_name: str,
             flattened_resources = flatten_resource(resource_name,
                                                    resource_def,
                                                    context)
-            processed_resources.append(flattened_resources)
+            processed_resources.extend(flattened_resources)
         else:
             sanitized_resource = sanitize_resource(resource_name,
                                                    resource_def,
@@ -97,7 +98,9 @@ def flatten_nested_stack(resource_name: str,
         os.path.join(os.path.abspath(os.path.dirname(master_template_location)),
                      nested_application_location,
                      ))
-    nested_template_def = load_template(nested_template_location)
+
+    with rel_dir_path(os.path.dirname(nested_template_location)):
+        nested_template_def = load_template(nested_template_location)
 
     nested_application_parameters = resource_properties.get('Parameters', {})
 
@@ -158,12 +161,10 @@ def sanitize_resource(resource_name: str,
 
 
 def load_template(template_file_path: str) -> dict:
-    loader = yaml.SafeLoader
-    from cfn.cfn_yaml_tags import mark_safe
-    mark_safe()
+    from cfn.cfn_yaml_tags import CfnLoader
 
     with open(template_file_path, 'r') as template_file:
-        template_def = yaml.load(template_file, Loader=loader)
+        template_def = yaml.load(template_file, Loader=CfnLoader)
 
     return template_def
 

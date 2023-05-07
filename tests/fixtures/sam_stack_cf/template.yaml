@@ -25,7 +25,7 @@ Resources:
   SubStack:
     Type: AWS::Serverless::Application
     Properties:
-      Location: ./sub_stack_template.yaml
+      Location: ./sub_stack/template.yaml
       Parameters:
         TableName: !Ref Param
 

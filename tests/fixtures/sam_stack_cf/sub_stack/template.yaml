@@ -22,4 +22,18 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
+  Prog01:
+    # noinspection YamlFormatViolation
+    Type: Program
+    Properties:
+      # noinspection YamlFormatViolation
+      Data: !IncludeString 'program.js'
+
+  Dat01:
+    # noinspection YamlFormatViolation
+    Type: Data
+    Properties:
+      # noinspection YamlFormatViolation
+      Data: !IncludeJsonStringFromYamlFile 'data.yaml'
+
 

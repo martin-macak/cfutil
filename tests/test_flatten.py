@@ -18,6 +18,7 @@ def test_process_cloudformation_resources(template_file_path):
     template_def = load_template(template_path)
 
     from commands.flatten import process_cloudformation_resources
-    process_cloudformation_resources('root', template_def, {
+    got = process_cloudformation_resources('root', template_def, {
         'master_template_location': template_path,
     })
+    ...
