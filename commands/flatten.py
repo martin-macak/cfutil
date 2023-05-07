@@ -1,15 +1,31 @@
 import copy
 import os
 from typing import Union
-from cfn.macros import rel_dir_path
 
 import yaml
 
 from cfn.cfn_yaml_tags import CloudFormationObject
+from cfn.macros import rel_dir_path
 
 
 def flatten_cloudformation_template(template_file_path: str) -> dict:
-    pass
+    template = load_template(template_file_path)
+    template_copy = copy.deepcopy(template)
+    resources = process_cloudformation_resources('root', template_copy, {
+        'master_template_location': template_file_path,
+    })
+
+    template_copy['Resources'] = {}
+
+    for resource_name, resource_def, _ in resources:
+        template_copy['Resources'][resource_name] = resource_def
+
+    return template_copy
+
+
+def dump_yaml(template: dict) -> str:
+    from cfn.cfn_yaml_tags import CfnDumper
+    return yaml.dump(template, Dumper=CfnDumper)
 
 
 def process_cloudformation_resources(template_name: str,

@@ -17,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-__version__ = "1.1.0"
+__version__ = '1.1.0'
 
 import itertools
 import json
@@ -26,7 +26,7 @@ from typing import Iterable, Union
 
 import six
 import yaml
-from yaml import SafeLoader
+from yaml import SafeLoader, SafeDumper
 from yaml.constructor import ConstructorError
 from yaml.representer import BaseRepresenter
 
@@ -36,11 +36,11 @@ from cfn.macros import (include_json_string_from_yaml_file_constructor,
 
 
 class CloudFormationObject(object):
-    SCALAR = "scalar"
-    SEQUENCE = "sequence"
-    SEQUENCE_OR_SCALAR = "sequence_scalar"
-    MAPPING = "mapping"
-    MAPPING_OR_SCALAR = "mapping_scalar"
+    SCALAR = 'scalar'
+    SEQUENCE = 'sequence'
+    SEQUENCE_OR_SCALAR = 'sequence_scalar'
+    MAPPING = 'mapping'
+    MAPPING_OR_SCALAR = 'mapping_scalar'
 
     name = None
     tag = None
@@ -64,11 +64,11 @@ class CloudFormationObject(object):
 
         name = self.name
 
-        if name == "Fn::GetAtt" and isinstance(data, six.string_types):
-            data = data.split(".")
-        elif name == "Ref" and "." in data:
-            name = "Fn::GetAtt"
-            data = data.split(".")
+        if name == 'Fn::GetAtt' and isinstance(data, six.string_types):
+            data = data.split('.')
+        elif name == 'Ref' and '.' in data:
+            name = 'Fn::GetAtt'
+            data = data.split('.')
 
         return {name: data}
 
@@ -91,7 +91,7 @@ class CloudFormationObject(object):
             except ConstructorError:
                 return cls(loader.construct_scalar(node))
         else:
-            raise RuntimeError("Unknown type {}".format(cls.type))
+            raise RuntimeError('Unknown type {}'.format(cls.type))
 
     @classmethod
     def represent(cls, dumper, obj):
@@ -104,10 +104,10 @@ class CloudFormationObject(object):
             return dumper.represent_scalar(obj.tag, data)
 
     def __str__(self):
-        return "{} {}".format(self.tag, self.data)
+        return '{} {}'.format(self.tag, self.data)
 
     def __repr__(self):
-        return "{}({})".format(self.__class__.__name__, repr(self.data))
+        return '{}({})'.format(self.__class__.__name__, repr(self.data))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and other.data == self.data
@@ -122,31 +122,31 @@ class JSONFromYAMLEncoder(json.JSONEncoder):
 
 # (name, tag, type)
 
-ref = ("Ref", "Ref", CloudFormationObject.SCALAR)
+ref = ('Ref', 'Ref', CloudFormationObject.SCALAR)
 
 functions = [
-    ("Fn::And", "And", CloudFormationObject.SEQUENCE),
-    ("Fn::Condition", "Condition", CloudFormationObject.SCALAR),
-    ("Fn::Base64", "Base64", CloudFormationObject.SCALAR),
-    ("Fn::Equals", "Equals", CloudFormationObject.SEQUENCE),
-    ("Fn::FindInMap", "FindInMap", CloudFormationObject.SEQUENCE),
-    ("Fn::GetAtt", "GetAtt", CloudFormationObject.SEQUENCE_OR_SCALAR),
-    ("Fn::GetAZs", "GetAZs", CloudFormationObject.SCALAR),
-    ("Fn::If", "If", CloudFormationObject.SEQUENCE),
-    ("Fn::ImportValue", "ImportValue", CloudFormationObject.SCALAR),
-    ("Fn::Join", "Join", CloudFormationObject.SEQUENCE),
-    ("Fn::Not", "Not", CloudFormationObject.SEQUENCE),
-    ("Fn::Or", "Or", CloudFormationObject.SEQUENCE),
-    ("Fn::Select", "Select", CloudFormationObject.SEQUENCE),
-    ("Fn::Split", "Split", CloudFormationObject.SEQUENCE),
-    ("Fn::Sub", "Sub", CloudFormationObject.SEQUENCE_OR_SCALAR),
+    ('Fn::And', 'And', CloudFormationObject.SEQUENCE),
+    ('Fn::Condition', 'Condition', CloudFormationObject.SCALAR),
+    ('Fn::Base64', 'Base64', CloudFormationObject.SCALAR),
+    ('Fn::Equals', 'Equals', CloudFormationObject.SEQUENCE),
+    ('Fn::FindInMap', 'FindInMap', CloudFormationObject.SEQUENCE),
+    ('Fn::GetAtt', 'GetAtt', CloudFormationObject.SEQUENCE_OR_SCALAR),
+    ('Fn::GetAZs', 'GetAZs', CloudFormationObject.SCALAR),
+    ('Fn::If', 'If', CloudFormationObject.SEQUENCE),
+    ('Fn::ImportValue', 'ImportValue', CloudFormationObject.SCALAR),
+    ('Fn::Join', 'Join', CloudFormationObject.SEQUENCE),
+    ('Fn::Not', 'Not', CloudFormationObject.SEQUENCE),
+    ('Fn::Or', 'Or', CloudFormationObject.SEQUENCE),
+    ('Fn::Select', 'Select', CloudFormationObject.SEQUENCE),
+    ('Fn::Split', 'Split', CloudFormationObject.SEQUENCE),
+    ('Fn::Sub', 'Sub', CloudFormationObject.SEQUENCE_OR_SCALAR),
 ]
 
 macros = [
-    ('Macro::IncludeString', "IncludeString", include_string_constructor),
-    ('Macro::IncludeJsonStringFromYamlFile', "IncludeJsonStringFromYamlFile",
+    ('Macro::IncludeString', 'IncludeString', include_string_constructor),
+    ('Macro::IncludeJsonStringFromYamlFile', 'IncludeJsonStringFromYamlFile',
      include_json_string_from_yaml_file_constructor),
-    ('Macro::GenerateUUID', "GenerateUUID", generate_uuid_constructor),
+    ('Macro::GenerateUUID', 'GenerateUUID', generate_uuid_constructor),
 ]
 
 _object_classes: Union[None, Iterable] = None
@@ -156,8 +156,8 @@ def init(safe=False):
     global _object_classes
     _object_classes = []
     for name_, tag_, type_ in itertools.chain(functions, [ref]):
-        if not tag_.startswith("!"):
-            tag_ = "!{}".format(tag_)
+        if not tag_.startswith('!'):
+            tag_ = '!{}'.format(tag_)
         tag_ = six.u(tag_)
 
         class Object(CloudFormationObject):
@@ -165,7 +165,7 @@ def init(safe=False):
             tag = tag_
             type = type_
 
-        obj_cls_name = re.search(r"\w+$", tag_).group(0)
+        obj_cls_name = re.search(r'\w+$', tag_).group(0)
         if six.PY2:
             obj_cls_name = str(obj_cls_name)
         Object.__name__ = obj_cls_name
@@ -191,8 +191,8 @@ def instrument_loader(loader):
         loader.add_constructor(obj_cls.tag, obj_cls.construct)
 
     for name_, tag_, constructor_ in macros:
-        if not tag_.startswith("!"):
-            tag_ = "!{}".format(tag_)
+        if not tag_.startswith('!'):
+            tag_ = '!{}'.format(tag_)
         tag_ = six.u(tag_)
         loader.add_constructor(tag_, constructor_)
 
@@ -206,10 +206,10 @@ class CfnLoader(SafeLoader):
     pass
 
 
-class CfnRepresenter(BaseRepresenter):
+class CfnDumper(SafeDumper):
     pass
 
 
 init()
 instrument_loader(CfnLoader)
-instrument_dumper(CfnRepresenter)
+instrument_dumper(CfnDumper)
