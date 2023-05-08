@@ -1,15 +1,20 @@
 import argparse
 import sys
 
+from commands.flatten import hook_command as cmd_flatten
+from commands.retain import hook_command as cmd_retain
+
 
 def run(*argv):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(help='sub-command help')
 
-    parser_flatten = subparsers.add_parser('flatten', help='flatten help')
-    parser_flatten.add_argument('template', type=str, help='template file')
+    cmd_flatten(parser, subparsers)
+    cmd_retain(parser, subparsers)
 
     args = parser.parse_args(argv[1:])
+    args.func(args)
+    ...
 
 
 def main():

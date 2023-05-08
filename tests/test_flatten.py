@@ -49,9 +49,9 @@ def test_flatten_cloudformation_template(template_file_path, expected):
 def test_dump_yaml(template_file_path, expected):
     template_path = os.path.abspath(os.path.join(test_fixtures, template_file_path))
 
-    from commands.flatten import dump_yaml, flatten_cloudformation_template
+    from commands.flatten import _dump_yaml, flatten_cloudformation_template
     processed = flatten_cloudformation_template(template_path)
-    got = dump_yaml(processed)
+    got = _dump_yaml(processed)
 
     if expected is not None:
         assert got == expected

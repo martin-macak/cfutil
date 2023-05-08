@@ -8,6 +8,16 @@ from cfn.cfn_yaml_tags import CloudFormationObject
 from cfn.macros import rel_dir_path
 
 
+def hook_command(parser, subparsers):
+    def cmd(args):
+        template = flatten_cloudformation_template(args.template)
+        print(_dump_yaml(template))
+
+    parser_flatten = subparsers.add_parser('flatten', help='flatten help')
+    parser_flatten.add_argument('template', type=str, help='template file')
+    parser_flatten.set_defaults(func=cmd)
+
+
 def flatten_cloudformation_template(template_file_path: str) -> dict:
     template = _load_template(template_file_path)
     template_copy = copy.deepcopy(template)
@@ -23,7 +33,7 @@ def flatten_cloudformation_template(template_file_path: str) -> dict:
     return template_copy
 
 
-def dump_yaml(template: dict) -> str:
+def _dump_yaml(template: dict) -> str:
     from cfn.cfn_yaml_tags import CfnDumper
     return yaml.dump(template, Dumper=CfnDumper)
 
