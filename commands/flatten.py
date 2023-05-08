@@ -158,7 +158,7 @@ def _sanitize_resource(resource_name: str,
         else:
             return False, None
 
-    def walk(obj: dict):
+    def _walk_dict(obj: dict):
         for key, value in obj.items():
             match value:
                 case CloudFormationObject(name='Ref'):
@@ -170,14 +170,19 @@ def _sanitize_resource(resource_name: str,
                         effective_value = value
                     obj[key] = effective_value
                 case dict():
-                    walk(value)
+                    _walk_dict(value)
                 case list():
-                    for item in value:
-                        walk(item)
-                case _:
-                    obj[key] = value
+                    _walk_list(value)
 
-    walk(resource_properties)
+    def _walk_list(obj: list):
+        for member in obj:
+            match member:
+                case dict():
+                    _walk_dict(member)
+                case list():
+                    _walk_list(member)
+
+    _walk_dict(resource_properties)
 
     new_def = copy.deepcopy(resource_def)
     new_def['Properties'] = resource_properties

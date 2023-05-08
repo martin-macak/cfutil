@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Contracts Management Service
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: vertice-contract-management
+    Description: Contract Management Micro Service
+    Author: verticeone
+    HomePageUrl: https://github.com/verticeone/vertice-contract-management
+    SourceCodeUrl: https://github.com/verticeone/vertice-contract-management
+
+Parameters:
+  Stage:
+    Type: String
+  LogLevel:
+    Type: String
+    Default: debug
+    AllowedValues:
+      - error
+      - warn
+      - info
+      - debug
+      - trace
+  ServiceName:
+    Type: String
+    Default: Vertice_ContractManagement
+
+
+Globals:
+  Function:
+    Environment:
+      Variables:
+        LOG_LEVEL: !Ref LogLevel
+        STAGE: !Ref Stage
+        POWERTOOLS_SERVICE_NAME: !Ref ServiceName
+
+
+Resources:
+  BasePythonLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Join [ "_", [ !Ref ServiceName, Python, Base ] ]
+      Description: Base Python Layer
+      ContentUri: ./layers/python/base
+      CompatibleRuntimes:
+        - python3.9
+      RetentionPolicy: Delete
+    Metadata:
+      BuildMethod: python3.9
+
+  ContractDraftTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Join [ "_", [ !Ref ServiceName, ContractDraft ] ]
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: OpenDraft
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: OpenDrafts
+          KeySchema:
+            - AttributeName: PK
+              KeyType: HASH
+            - AttributeName: OpenDraft
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  ApiReadManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join [ "_", [ !Ref ServiceName, Api, Read ] ]
+      Path: '/vertice/contract-management/service/'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:Query
+            Resource:
+              - !Sub ${ContractDraftTable.Arn}/index/OpenDrafts
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:BatchGetItem
+            Resource:
+              - !Sub ${ContractDraftTable.Arn}
+
+  ApiWriteManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join [ "_", [ !Ref ServiceName, Api, Write ] ]
+      Path: '/vertice/contract-management/service/'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !Sub [ 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${FunctionName}*', { FunctionName: !Join [ "_", [ !Ref ServiceName, Write ] ] } ]
+
+  SchemaRegistry:
+    Type: AWS::EventSchemas::Registry
+    Properties:
+      RegistryName: !Ref ServiceName
+
+  ApiStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: api/template.yaml
+      Parameters:
+        Stage: !Ref Stage
+        LogLevel: !Ref LogLevel
+        ServiceName: !Ref ServiceName
+        BasePythonLayerArn: !Ref BasePythonLayer
+        SchemaRegistry: !Ref SchemaRegistry
+        DraftTableName: !Ref ContractDraftTable

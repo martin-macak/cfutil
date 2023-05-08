@@ -1,0 +1,35 @@
+type: object
+properties:
+  PK:
+    type: string
+  SK:
+    type: string
+  AccountId:
+    type: string
+  DraftId:
+    type: string
+  Contract:
+    $ref: '#/$defs/ContractDocument'
+  PurchaseType:
+    type: ["string", "null"]
+  ParentContract:
+    type: ["string", "null"]
+  Documents:
+    type: ["object", "null"]
+  CreatedAt:
+    type: string
+  UpdatedAt:
+    type: string
+  ChangeNumber:
+    type: integer
+  CreatedBy:
+    type: string
+  UpdatedBy:
+    type: string
+  LinkedContract:
+    type: string
+$defs:
+  ContractDocument:
+    type: object
+    additionalProperties: true
+

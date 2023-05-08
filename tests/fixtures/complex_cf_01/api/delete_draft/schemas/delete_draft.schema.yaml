@@ -1,0 +1,10 @@
+type: object
+properties:
+  AccountId:
+    type: string
+  DraftId:
+    type: string
+required:
+  - AccountId
+  - DraftId
+$defs: {}

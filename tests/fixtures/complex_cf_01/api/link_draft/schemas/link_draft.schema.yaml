@@ -1,0 +1,29 @@
+type: object
+properties:
+  accountId:
+    type: string
+    description: >
+      The ID of the account
+  draftRef:
+    $ref: '#/$defs/draftRef'
+  contractRef:
+    $ref: '#/$defs/contractRef'
+required:
+  - accountId
+  - draftRef
+  - contractRef
+$defs:
+  draftRef:
+    type: string
+  contractRef:
+    type: object
+    properties:
+      contractId:
+        type: string
+      contractVersion:
+        type: string
+    required:
+      - contractId
+      - contractVersion
+
+

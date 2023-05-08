@@ -1,0 +1,35 @@
+type: object
+properties:
+  AccountId:
+    type: string
+  DraftId:
+    type: string
+  Draft:
+    $ref: '#/$defs/Draft'
+required:
+  - AccountId
+  - Draft
+$defs:
+  Draft:
+    type: object
+    properties:
+      PurchaseType:
+        type: string
+      ParentContractRef:
+        $ref: '#/$defs/ContractRef'
+      Contract:
+        $ref: '#/$defs/ContractDocument'
+  ContractRef:
+    type: object
+    properties:
+      ContractId:
+        type: string
+      ContractVersion:
+        type: integer
+    required:
+      - ContractId
+      - ContractVersion
+  ContractDocument:
+    type: object
+    additionalProperties: true
+

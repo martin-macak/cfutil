@@ -25,9 +25,14 @@ def test_process_cloudformation_resources(template_file_path, expected):
     if expected is not None:
         assert got == expected
 
+
 @pytest.mark.parametrize('template_file_path, expected', [
     (
             'sam_stack_cf/template.yaml',
+            None,
+    ),
+    (
+            'complex_cf_01/template.yaml',
             None,
     ),
 ])
@@ -39,6 +44,7 @@ def test_flatten_cloudformation_template(template_file_path, expected):
 
     if expected is not None:
         assert got == expected
+
 
 @pytest.mark.parametrize('template_file_path, expected', [
     (

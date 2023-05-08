@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Contracts Management API layer
+
+Parameters:
+  Stage:
+    Type: String
+  LogLevel:
+    Type: String
+  ServiceName:
+    Type: String
+  BasePythonLayerArn:
+    Type: String
+  SchemaRegistry:
+    Type: String
+  DraftTableName:
+    Type: String
+
+
+Globals:
+  Function:
+    MemorySize: 1024
+    Environment:
+      Variables:
+        LOG_LEVEL: !Ref LogLevel
+        STAGE: !Ref Stage
+        POWERTOOLS_SERVICE_NAME: !Ref ServiceName
+        DRAFTS_TABLE_NAME: !Ref DraftTableName
+
+Resources:
+  WriteDraftRequestSchema:
+    Type: AWS::EventSchemas::Schema
+    Properties:
+      SchemaName: WriteDraftRequest
+      RegistryName: !Ref SchemaRegistry
+      Type: JSONSchemaDraft4
+      # noinspection YamlFormatViolation
+      Content: !IncludeJsonStringFromYamlFile write_draft/schemas/write_draft.schema.yaml
+
+  WriteDraftResponseSchema:
+    Type: AWS::EventSchemas::Schema
+    Properties:
+      SchemaName: WriteDraftResponse
+      RegistryName: !Ref SchemaRegistry
+      Type: JSONSchemaDraft4
+      # noinspection YamlFormatViolation
+      Content: !IncludeJsonStringFromYamlFile write_draft/schemas/write_draft_response.schema.yaml
+
+  LinkDraftRequestSchema:
+    Type: AWS::EventSchemas::Schema
+    Properties:
+      SchemaName: LinkDraftRequest
+      RegistryName: !Ref SchemaRegistry
+      Type: JSONSchemaDraft4
+      # noinspection YamlFormatViolation
+      Content: !IncludeJsonStringFromYamlFile link_draft/schemas/link_draft.schema.yaml
+
+  LinkDraftResponseSchema:
+    Type: AWS::EventSchemas::Schema
+    Properties:
+      SchemaName: LinkDraftResponse
+      RegistryName: !Ref SchemaRegistry
+      Type: JSONSchemaDraft4
+      # noinspection YamlFormatViolation
+      Content: !IncludeJsonStringFromYamlFile link_draft/schemas/link_draft_response.schema.yaml
+
+  DeleteDraftRequestSchema:
+    Type: AWS::EventSchemas::Schema
+    Properties:
+      SchemaName: DeleteDraftRequest
+      RegistryName: !Ref SchemaRegistry
+      Type: JSONSchemaDraft4
+      # noinspection YamlFormatViolation
+      Content: !IncludeJsonStringFromYamlFile delete_draft/schemas/delete_draft.schema.yaml
+
+  DeleteDraftResponseSchema:
+    Type: AWS::EventSchemas::Schema
+    Properties:
+      SchemaName: DeleteDraftResponse
+      RegistryName: !Ref SchemaRegistry
+      Type: JSONSchemaDraft4
+      # noinspection YamlFormatViolation
+      Content: !IncludeJsonStringFromYamlFile delete_draft/schemas/delete_draft_response.schema.yaml
+
+  WriteDraftFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join [ "_", [ !Ref ServiceName, Write, WriteDraft ] ]
+      Description: Write Draft
+      CodeUri: ./write_draft
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Layers:
+        - !Ref BasePythonLayerArn
+      Role: !GetAtt LambdaServiceRole.Arn
+
+  LinkDraftFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join [ "_", [ !Ref ServiceName, Write, LinkDraft ] ]
+      Description: Link Draft
+      CodeUri: ./link_draft
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Layers:
+        - !Ref BasePythonLayerArn
+      Role: !GetAtt LambdaServiceRole.Arn
+
+  DeleteDraftFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Join [ "_", [ !Ref ServiceName, Write, DeleteDraft ] ]
+      Description: Delete Draft
+      CodeUri: ./delete_draft
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Layers:
+          - !Ref BasePythonLayerArn
+      Role: !GetAtt LambdaServiceRole.Arn
+
+  LambdaServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ "_", [ !Ref ServiceName, Lambda, ServiceRole ] ]
+      Path: '/vertice/contracts-management-api/service/'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ReadWriteDraftTable
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:BatchGetItem
+                  - dynamodb:BatchWriteItem
+                Resource:
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DraftTableName}
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DraftTableName}/index/*
+
+
+
