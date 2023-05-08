@@ -12,10 +12,10 @@ test_fixtures = os.path.join(os.path.dirname(__file__), 'fixtures')
     ),
 ])
 def test_process_cloudformation_resources(template_file_path, expected):
-    from commands.flatten import load_template
+    from commands.flatten import _load_template
 
     template_path = os.path.abspath(os.path.join(test_fixtures, template_file_path))
-    template_def = load_template(template_path)
+    template_def = _load_template(template_path)
 
     from commands.flatten import process_cloudformation_resources
     got = process_cloudformation_resources('root', template_def, {

@@ -9,7 +9,7 @@ from cfn.macros import rel_dir_path
 
 
 def flatten_cloudformation_template(template_file_path: str) -> dict:
-    template = load_template(template_file_path)
+    template = _load_template(template_file_path)
     template_copy = copy.deepcopy(template)
     resources = process_cloudformation_resources('root', template_copy, {
         'master_template_location': template_file_path,
@@ -35,21 +35,21 @@ def process_cloudformation_resources(template_name: str,
 
     template_resources: dict = template.get('Resources', {})
     for resource_name, resource_def in template_resources.items():
-        if needs_flattening(resource_def):
-            flattened_resources = flatten_resource(resource_name,
-                                                   resource_def,
-                                                   context)
+        if _needs_flattening(resource_def):
+            flattened_resources = _flatten_resource(resource_name,
+                                                    resource_def,
+                                                    context)
             processed_resources.extend(flattened_resources)
         else:
-            sanitized_resource = sanitize_resource(resource_name,
-                                                   resource_def,
-                                                   context)
+            sanitized_resource = _sanitize_resource(resource_name,
+                                                    resource_def,
+                                                    context)
             processed_resources.append(sanitized_resource)
 
     return processed_resources
 
 
-def needs_flattening(resource_def: dict) -> bool:
+def _needs_flattening(resource_def: dict) -> bool:
     """
     This function checks whether current resource is a pointer to nested resource, that
     should be flattened.
@@ -73,33 +73,33 @@ def needs_flattening(resource_def: dict) -> bool:
             return False
 
 
-def flatten_resource(resource_name: str,
-                     resource_def: dict,
-                     context: dict) -> list:
+def _flatten_resource(resource_name: str,
+                      resource_def: dict,
+                      context: dict) -> list:
     resource_type = resource_def.get('Type', '')
 
     match resource_type:
         case 'AWS::CloudFormation::Stack':
-            return flatten_nested_stack(resource_name,
-                                        resource_def,
-                                        context)
+            return _flatten_nested_stack(resource_name,
+                                         resource_def,
+                                         context)
         case 'AWS::Serverless::Application':
-            return flatten_serverless_application(resource_name,
-                                                  resource_def,
-                                                  context)
+            return _flatten_serverless_application(resource_name,
+                                                   resource_def,
+                                                   context)
         case _:
             raise ValueError(f'Unknown resource type: {resource_type}')
 
 
-def flatten_serverless_application(resource_name: str,
-                                   resource_def: dict,
-                                   context: dict) -> list:
-    return flatten_nested_stack(resource_name, resource_def, context)
+def _flatten_serverless_application(resource_name: str,
+                                    resource_def: dict,
+                                    context: dict) -> list:
+    return _flatten_nested_stack(resource_name, resource_def, context)
 
 
-def flatten_nested_stack(resource_name: str,
-                         resource_def: dict,
-                         context: dict) -> list:
+def _flatten_nested_stack(resource_name: str,
+                          resource_def: dict,
+                          context: dict) -> list:
     master_template_location = context.get('master_template_location', None)
     if not master_template_location:
         raise ValueError('master_template_location is required when flattening nested Serverless::Application')
@@ -115,15 +115,14 @@ def flatten_nested_stack(resource_name: str,
                      nested_application_location,
                      ))
 
-    with rel_dir_path(os.path.dirname(nested_template_location)):
-        nested_template_def = load_template(nested_template_location)
+    nested_template_def = _load_template(nested_template_location)
 
     nested_application_parameters = resource_properties.get('Parameters', {})
 
     nested_context = {
         'master_template_location': nested_template_location,
         'parameters': nested_application_parameters,
-        'naming_prefix': get_naming_prefix(resource_name),
+        'naming_prefix': _get_naming_prefix(resource_name),
     }
 
     nested_resources = process_cloudformation_resources(resource_name,
@@ -133,9 +132,9 @@ def flatten_nested_stack(resource_name: str,
     return nested_resources
 
 
-def sanitize_resource(resource_name: str,
-                      resource_def: dict,
-                      context: dict) -> tuple[str, dict, dict]:
+def _sanitize_resource(resource_name: str,
+                       resource_def: dict,
+                       context: dict) -> tuple[str, dict, dict]:
     naming_prefix = context.get('naming_prefix', '')
 
     sanitized_resource_name = f'{naming_prefix}{resource_name}'
@@ -176,14 +175,15 @@ def sanitize_resource(resource_name: str,
     return sanitized_resource_name, new_def, resource_def
 
 
-def load_template(template_file_path: str) -> dict:
+def _load_template(template_file_path: str) -> dict:
     from cfn.cfn_yaml_tags import CfnLoader
 
-    with open(template_file_path, 'r') as template_file:
-        template_def = yaml.load(template_file, Loader=CfnLoader)
+    with rel_dir_path(os.path.dirname(template_file_path)):
+        with open(template_file_path, 'r') as template_file:
+            template_def = yaml.load(template_file, Loader=CfnLoader)
 
     return template_def
 
 
-def get_naming_prefix(resource_name: str) -> str:
+def _get_naming_prefix(resource_name: str) -> str:
     return resource_name
