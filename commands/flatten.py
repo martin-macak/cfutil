@@ -202,6 +202,7 @@ def _sanitize_resource(resource_name: str,
 
                         retargeted_expr = '.'.join([retargeted_pointer, *rest])
                         retargeted_sub_expr += sub_expr[pm.end() if pm is not None else 0:m.start()] + '${' + retargeted_expr + '}'
+                        pm = m
 
                     _walk_dict(sub_context)
 
