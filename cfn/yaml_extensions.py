@@ -1,4 +1,5 @@
 import itertools
+import os.path
 import re
 from io import IOBase
 from typing import Union, Iterable, IO
@@ -10,7 +11,8 @@ from yaml.constructor import ConstructorError
 
 from cfn.macros import (include_json_string_from_yaml_file_constructor,
                         include_string_constructor,
-                        generate_uuid_constructor)
+                        generate_uuid_constructor,
+                        rel_dir_path as macros_ref_dir)
 
 
 class _CloudFormationObject(object):
@@ -54,7 +56,7 @@ class _CloudFormationObject(object):
     @classmethod
     def construct(cls, loader, node):
         if isinstance(loader, CfnMacroLoader) and cls.macro is not None:
-            return cls.macro(loader.construct_scalar(node))
+            return cls.macro(loader, node)
 
         if cls.type == cls.SCALAR:
             return cls(loader.construct_scalar(node))
@@ -169,13 +171,18 @@ def _init(safe=False):
 def load_cfn(file: Union[str, IO], evaluate_macros=False) -> dict:
     if isinstance(file, str):
         with open(file, 'r') as f:
-            return load_cfn(f)
+            return load_cfn(f, evaluate_macros=evaluate_macros)
 
     if not isinstance(file, IOBase):
         raise TypeError('file must be a file path or IO object')
 
+    # noinspection PyUnresolvedReferences
+    file_path = file.name
+    loader_base = os.path.dirname(file_path)
+
     if evaluate_macros:
-        return yaml.load(file, Loader=CfnMacroLoader)
+        with macros_ref_dir(loader_base):
+            return yaml.load(file, Loader=CfnMacroLoader)
     else:
         return yaml.load(file, Loader=CfnLoader)
 
