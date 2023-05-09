@@ -89,6 +89,7 @@ Resources:
               - dynamodb:Query
             Resource:
               - !Sub ${ContractDraftTable.Arn}/index/OpenDrafts
+              - !Sub [ '${Local}', { Local: !Ref Stage } ]
           - Effect: Allow
             Action:
               - dynamodb:GetItem
@@ -120,6 +121,8 @@ Resources:
     Properties:
       Location: api/template.yaml
       Parameters:
+        # noinspection YamlFormatViolation
+        Name: !GetAtt ApiReadManagedPolicy.Arn
         Stage: !Ref Stage
         LogLevel: !Ref LogLevel
         ServiceName: !Ref ServiceName

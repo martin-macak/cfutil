@@ -1,6 +1,7 @@
 import argparse
 import copy
 import os
+import re
 from typing import Union
 
 from cfn.macros import rel_dir_path
@@ -155,24 +156,70 @@ def _sanitize_resource(resource_name: str,
 
     resource_properties = copy.deepcopy(resource_def.get('Properties', {}))
 
-    def ref_from_context(key: str) -> tuple[bool, Union[str, None]]:
+    def ref_from_param_context(key: str) -> tuple[bool, Union[str, None]]:
         parameters = context.get('parameters', {})
         if key in parameters:
             return True, parameters[key]
         else:
             return False, None
 
+    def process_cfn_element(element):
+        match element:
+            case CloudFormationObject(name='Ref'):
+                def process_ref():
+                    ref = element.data
+                    is_ref_from_context, ref_value_from_context = ref_from_param_context(ref)
+                    if is_ref_from_context:
+                        element.data = element.data
+                    else:
+                        element.data = f'{naming_prefix}{ref}'
+
+                process_ref()
+            case CloudFormationObject(name='Fn::Sub'):
+                def process_sub():
+                    sub_context = element.data[1] if isinstance(element.data, list) else {}
+                    sub_expr = element.data[0] if isinstance(element.data, list) else str(element.data)
+
+                    def ref_pointer_from_context(key: str, local_context: dict) -> tuple[bool, Union[str, None]]:
+                        if key in local_context:
+                            return True, key
+                        else:
+                            return False, None
+
+                    pm = None
+                    retargeted_sub_expr = ''
+                    for m in re.finditer(r'(?<!\\)\$\{[a-zA-Z_.]+}', sub_expr):
+                        expr = sub_expr[m.start() + 2:m.end() - 1]
+                        pointer, *rest = expr.split('.', 1)
+                        is_pointer_from_sub_context, ref_pointer_from_sub_context = ref_pointer_from_context(pointer, sub_context)
+                        is_pointer_from_param_context, ref_pointer_from_param_context = ref_pointer_from_context(pointer, context)
+                        if is_pointer_from_sub_context:
+                            retargeted_pointer = ref_pointer_from_sub_context
+                        elif is_pointer_from_param_context:
+                            retargeted_pointer = ref_pointer_from_param_context
+                        else:
+                            retargeted_pointer = f'{naming_prefix}{pointer}'
+
+                        retargeted_expr = '.'.join([retargeted_pointer, *rest])
+                        retargeted_sub_expr += sub_expr[pm.end() if pm is not None else 0:m.start()] + '${' + retargeted_expr + '}'
+
+                    _walk_dict(sub_context)
+
+                process_sub()
+            case CloudFormationObject(name='Fn::GetAtt'):
+                def process_get_att():
+                    pointer = element.data
+                    target_resource_name, attr_name = pointer.split('.')
+                    is_ref_from_context, ref_value_from_context = ref_from_param_context(target_resource_name)
+                    element.data = f'{naming_prefix}{ref_value_from_context}.{attr_name}'
+
+                process_get_att()
+
     def _walk_dict(obj: dict):
         for key, value in obj.items():
             match value:
-                case CloudFormationObject(name='Ref'):
-                    ref = value.data
-                    is_ref_from_context, ref_value_from_context = ref_from_context(ref)
-                    if is_ref_from_context:
-                        effective_value = ref_value_from_context
-                    else:
-                        effective_value = value
-                    obj[key] = effective_value
+                case CloudFormationObject():
+                    process_cfn_element(element=value)
                 case dict():
                     _walk_dict(value)
                 case list():
@@ -185,6 +232,8 @@ def _sanitize_resource(resource_name: str,
                     _walk_dict(member)
                 case list():
                     _walk_list(member)
+                case CloudFormationObject():
+                    process_cfn_element(element=member)
 
     _walk_dict(resource_properties)
 
