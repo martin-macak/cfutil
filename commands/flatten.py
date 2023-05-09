@@ -1,3 +1,4 @@
+import argparse
 import copy
 import os
 from typing import Union
@@ -8,16 +9,21 @@ from cfn.yaml_extensions import CloudFormationObject
 
 def hook_command(parser, subparsers):
     def cmd(args):
-        template = flatten_cloudformation_template(args.template)
+        template = flatten_cloudformation_template(args.template,
+                                                   evaluate_macros=args.macros)
         print(_dump_yaml(template))
 
     parser_flatten = subparsers.add_parser('flatten', help='flatten help')
     parser_flatten.add_argument('template', type=str, help='template file')
     parser_flatten.set_defaults(func=cmd)
 
+    parser_flatten.add_argument('--macros',
+                                action=argparse.BooleanOptionalAction,
+                                help='evaluate macros')
 
-def flatten_cloudformation_template(template_file_path: str) -> dict:
-    template = _load_template(template_file_path)
+
+def flatten_cloudformation_template(template_file_path: str, evaluate_macros=False) -> dict:
+    template = _load_template(template_file_path, evaluate_macros=evaluate_macros)
     template_copy = copy.deepcopy(template)
     resources = process_cloudformation_resources('root', template_copy, {
         'master_template_location': template_file_path,
@@ -188,12 +194,12 @@ def _sanitize_resource(resource_name: str,
     return sanitized_resource_name, new_def, resource_def
 
 
-def _load_template(template_file_path: str) -> dict:
+def _load_template(template_file_path: str, evaluate_macros: bool = False) -> dict:
     from cfn.yaml_extensions import load_cfn
 
     with rel_dir_path(os.path.dirname(template_file_path)):
         with open(template_file_path, 'r') as template_file:
-            template_def = load_cfn(template_file)
+            template_def = load_cfn(template_file, evaluate_macros=evaluate_macros)
 
     return template_def
 

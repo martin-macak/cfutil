@@ -1,6 +1,8 @@
 import argparse
 import sys
 
+import argcomplete
+
 from commands.flatten import hook_command as cmd_flatten
 from commands.retain import hook_command as cmd_retain
 
@@ -12,9 +14,10 @@ def run(*argv):
     cmd_flatten(parser, subparsers)
     cmd_retain(parser, subparsers)
 
+    argcomplete.autocomplete(parser)
+
     args = parser.parse_args(argv[1:])
     args.func(args)
-    ...
 
 
 def main():
