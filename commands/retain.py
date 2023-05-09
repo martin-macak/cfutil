@@ -1,8 +1,6 @@
 import copy
 import os
 
-import yaml
-
 from cfn.macros import rel_dir_path
 
 
@@ -17,8 +15,8 @@ def hook_command(parser, subparsers):
 
 
 def _dump_yaml(template: dict) -> str:
-    from cfn.cfn_yaml_tags import CfnDumper
-    return yaml.dump(template, Dumper=CfnDumper)
+    from cfn.yaml_extensions import dump_cfn
+    return dump_cfn(template)
 
 
 def _process_template(template_path: str) -> dict:
@@ -37,11 +35,11 @@ def _mark_resources_as_retained(template: dict) -> dict:
 
 
 def _load_template(template_file_path: str) -> dict:
-    from cfn.cfn_yaml_tags import CfnLoader
+    from cfn.yaml_extensions import load_cfn
 
     with rel_dir_path(os.path.dirname(template_file_path)):
         with open(template_file_path, 'r') as template_file:
-            template_def = yaml.load(template_file, Loader=CfnLoader)
+            template_def = load_cfn(template_file)
 
     return template_def
 

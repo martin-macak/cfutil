@@ -15,7 +15,7 @@ from cfn.macros import (include_json_string_from_yaml_file_constructor,
                         rel_dir_path as macros_ref_dir)
 
 
-class _CloudFormationObject(object):
+class CloudFormationObject(object):
     SCALAR = 'scalar'
     SEQUENCE = 'sequence'
     SEQUENCE_OR_SCALAR = 'sequence_scalar'
@@ -34,7 +34,7 @@ class _CloudFormationObject(object):
         """Return the JSON equivalent"""
 
         def convert(obj):
-            return obj.to_json() if isinstance(obj, _CloudFormationObject) else obj
+            return obj.to_json() if isinstance(obj, CloudFormationObject) else obj
 
         if isinstance(self.data, dict):
             data = {key: convert(value) for key, value in six.iteritems(self.data)}
@@ -111,31 +111,31 @@ class CfnMacroLoader(CfnLoader):
 
 _object_classes: Union[None, Iterable] = None
 
-_ref = ('Ref', 'Ref', _CloudFormationObject.SCALAR)
+_ref = ('Ref', 'Ref', CloudFormationObject.SCALAR)
 
 _functions = [
-    ('Fn::And', 'And', _CloudFormationObject.SEQUENCE),
-    ('Fn::Condition', 'Condition', _CloudFormationObject.SCALAR),
-    ('Fn::Base64', 'Base64', _CloudFormationObject.SCALAR),
-    ('Fn::Equals', 'Equals', _CloudFormationObject.SEQUENCE),
-    ('Fn::FindInMap', 'FindInMap', _CloudFormationObject.SEQUENCE),
-    ('Fn::GetAtt', 'GetAtt', _CloudFormationObject.SEQUENCE_OR_SCALAR),
-    ('Fn::GetAZs', 'GetAZs', _CloudFormationObject.SCALAR),
-    ('Fn::If', 'If', _CloudFormationObject.SEQUENCE),
-    ('Fn::ImportValue', 'ImportValue', _CloudFormationObject.SCALAR),
-    ('Fn::Join', 'Join', _CloudFormationObject.SEQUENCE),
-    ('Fn::Not', 'Not', _CloudFormationObject.SEQUENCE),
-    ('Fn::Or', 'Or', _CloudFormationObject.SEQUENCE),
-    ('Fn::Select', 'Select', _CloudFormationObject.SEQUENCE),
-    ('Fn::Split', 'Split', _CloudFormationObject.SEQUENCE),
-    ('Fn::Sub', 'Sub', _CloudFormationObject.SEQUENCE_OR_SCALAR),
+    ('Fn::And', 'And', CloudFormationObject.SEQUENCE),
+    ('Fn::Condition', 'Condition', CloudFormationObject.SCALAR),
+    ('Fn::Base64', 'Base64', CloudFormationObject.SCALAR),
+    ('Fn::Equals', 'Equals', CloudFormationObject.SEQUENCE),
+    ('Fn::FindInMap', 'FindInMap', CloudFormationObject.SEQUENCE),
+    ('Fn::GetAtt', 'GetAtt', CloudFormationObject.SEQUENCE_OR_SCALAR),
+    ('Fn::GetAZs', 'GetAZs', CloudFormationObject.SCALAR),
+    ('Fn::If', 'If', CloudFormationObject.SEQUENCE),
+    ('Fn::ImportValue', 'ImportValue', CloudFormationObject.SCALAR),
+    ('Fn::Join', 'Join', CloudFormationObject.SEQUENCE),
+    ('Fn::Not', 'Not', CloudFormationObject.SEQUENCE),
+    ('Fn::Or', 'Or', CloudFormationObject.SEQUENCE),
+    ('Fn::Select', 'Select', CloudFormationObject.SEQUENCE),
+    ('Fn::Split', 'Split', CloudFormationObject.SEQUENCE),
+    ('Fn::Sub', 'Sub', CloudFormationObject.SEQUENCE_OR_SCALAR),
 ]
 
 _macros = [
-    ('Macro::IncludeString', 'IncludeString', _CloudFormationObject.SCALAR, include_string_constructor),
-    ('Macro::IncludeJsonStringFromYamlFile', 'IncludeJsonStringFromYamlFile', _CloudFormationObject.SCALAR,
+    ('Macro::IncludeString', 'IncludeString', CloudFormationObject.SCALAR, include_string_constructor),
+    ('Macro::IncludeJsonStringFromYamlFile', 'IncludeJsonStringFromYamlFile', CloudFormationObject.SCALAR,
      include_json_string_from_yaml_file_constructor),
-    ('Macro::GenerateUUID', 'GenerateUUID', _CloudFormationObject.SCALAR, generate_uuid_constructor),
+    ('Macro::GenerateUUID', 'GenerateUUID', CloudFormationObject.SCALAR, generate_uuid_constructor),
 ]
 
 
@@ -147,7 +147,7 @@ def _init(safe=False):
             tag_ = '!{}'.format(tag_)
         tag_ = six.u(tag_)
 
-        class Object(_CloudFormationObject):
+        class Object(CloudFormationObject):
             name = name_
             tag = tag_
             type = type_
