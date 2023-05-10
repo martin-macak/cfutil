@@ -32,7 +32,14 @@ def flatten_cloudformation_template(template_file_path: str, evaluate_macros=Fal
 
     template_copy['Resources'] = {}
 
-    for resource_name, resource_def, _ in resources:
+    for resource_name, resource_def, *meta in resources:
+        # TODO: put information about retargeted resources into metadata
+        # structure
+        # ResourceForImport:
+        #   - LogicalId: RetargetedId
+        #     ResourceType: ResourceType
+        #     ResourceIdentifier:
+        #       TableName|ResourceName: Name
         template_copy['Resources'][resource_name] = resource_def
 
     return template_copy
@@ -149,7 +156,7 @@ def _flatten_nested_stack(resource_name: str,
 
 def _sanitize_resource(resource_name: str,
                        resource_def: dict,
-                       context: dict) -> tuple[str, dict, dict]:
+                       context: dict) -> tuple[str, dict, dict, dict]:
     naming_prefix = context.get('naming_prefix', '')
 
     sanitized_resource_name = f'{naming_prefix}{resource_name}'
@@ -191,8 +198,10 @@ def _sanitize_resource(resource_name: str,
                     for m in re.finditer(r'(?<!\\)\$\{[a-zA-Z_.]+}', sub_expr):
                         expr = sub_expr[m.start() + 2:m.end() - 1]
                         pointer, *rest = expr.split('.', 1)
-                        is_pointer_from_sub_context, ref_pointer_from_sub_context = ref_pointer_from_context(pointer, sub_context)
-                        is_pointer_from_param_context, ref_pointer_from_param_context = ref_pointer_from_context(pointer, context)
+                        is_pointer_from_sub_context, ref_pointer_from_sub_context = ref_pointer_from_context(pointer,
+                                                                                                             sub_context)
+                        is_pointer_from_param_context, ref_pointer_from_param_context = ref_pointer_from_context(
+                            pointer, context.get('parameters', {}))
                         if is_pointer_from_sub_context:
                             retargeted_pointer = ref_pointer_from_sub_context
                         elif is_pointer_from_param_context:
@@ -201,7 +210,8 @@ def _sanitize_resource(resource_name: str,
                             retargeted_pointer = f'{naming_prefix}{pointer}'
 
                         retargeted_expr = '.'.join([retargeted_pointer, *rest])
-                        retargeted_sub_expr += sub_expr[pm.end() if pm is not None else 0:m.start()] + '${' + retargeted_expr + '}'
+                        retargeted_sub_expr += sub_expr[
+                                               pm.end() if pm is not None else 0:m.start()] + '${' + retargeted_expr + '}'
                         pm = m
 
                     _walk_dict(sub_context)
@@ -241,7 +251,17 @@ def _sanitize_resource(resource_name: str,
     new_def = copy.deepcopy(resource_def)
     new_def['Properties'] = resource_properties
 
-    return sanitized_resource_name, new_def, resource_def
+    return (
+        sanitized_resource_name,
+        new_def,
+        resource_def,
+        {
+            'naming_prefix': naming_prefix,
+            'original_resource_name': resource_name,
+            'sanitized_resource_name': sanitized_resource_name,
+            'was_retargeted': sanitized_resource_name != resource_name,
+        },
+    )
 
 
 def _load_template(template_file_path: str, evaluate_macros: bool = False) -> dict:
