@@ -2,7 +2,7 @@ import argparse
 import copy
 import os
 import re
-from typing import Union
+from typing import Union, Tuple
 
 from cfn.macros import rel_dir_path
 from cfn.yaml_extensions import CloudFormationObject
@@ -31,8 +31,10 @@ def flatten_cloudformation_template(template_file_path: str, evaluate_macros=Fal
     })
 
     template_copy['Resources'] = {}
+    template_copy['Metadata'] = {} if template_copy.get('Metadata') is None else template_copy['Metadata']
+    template_copy['Metadata']['ResourcesForImport'] = []
 
-    for resource_name, resource_def, *meta in resources:
+    for resource_name, effective_def, original_def, meta in resources:
         # TODO: put information about retargeted resources into metadata
         # structure
         # ResourceForImport:
@@ -40,7 +42,11 @@ def flatten_cloudformation_template(template_file_path: str, evaluate_macros=Fal
         #     ResourceType: ResourceType
         #     ResourceIdentifier:
         #       TableName|ResourceName: Name
-        template_copy['Resources'][resource_name] = resource_def
+        template_copy['Resources'][resource_name] = effective_def
+
+        is_required_for_import, import_def = _describe_import(resource_name, effective_def, original_def, meta)
+        if is_required_for_import:
+            template_copy['Metadata']['ResourcesForImport'].append(import_def)
 
     return template_copy
 
@@ -272,6 +278,36 @@ def _load_template(template_file_path: str, evaluate_macros: bool = False) -> di
             template_def = load_cfn(template_file, evaluate_macros=evaluate_macros)
 
     return template_def
+
+
+def _describe_import(resource_name: str,
+                     resource_def: dict,
+                     original_def: dict,
+                     meta: dict) -> Tuple[bool, Union[dict, None]]:
+    resource_handlers = {
+        'AWS::Serverless::Function': lambda: ('FunctionName', resource_def['Properties'].get('FunctionName')),
+        'AWS::Lambda::Function': lambda: ('FunctionName', resource_def['Properties'].get('FunctionName')),
+        'AWS::DynamoDB::Table': lambda: ('TableName', resource_def['Properties'].get('TableName')),
+    }
+
+    is_retargeted = meta.get('was_retargeted', False)
+    if not is_retargeted:
+        return False, None
+
+    resource_type = resource_def.get('Type')
+    resource_handler = resource_handlers.get(resource_type)
+
+    if resource_handler is None:
+        return False, None
+
+    resource_id_key, resource_id_value = resource_handler()
+    return True, {
+        'LogicalId': resource_name,
+        'ResourceType': resource_type,
+        'ResourceIdentifier': {
+            resource_id_key: resource_id_value,
+        },
+    }
 
 
 def _get_naming_prefix(resource_name: str) -> str:
