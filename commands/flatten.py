@@ -143,6 +143,9 @@ def _flatten_nested_stack(resource_name: str,
                      nested_application_location,
                      ))
 
+    if nested_template_location.endswith('.out.yaml'):
+        nested_template_location = nested_template_location[:-9] + '.yaml'
+
     nested_template_def = _load_template(nested_template_location)
 
     nested_application_parameters = resource_properties.get('Parameters', {})
